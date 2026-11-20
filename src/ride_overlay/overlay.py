@@ -1,12 +1,16 @@
 """Floating overlay window for macOS (AppKit via PyObjC)."""
 
 import random
+import signal
+import time
 
 import AppKit
+import Quartz  # noqa: F401  (teaches PyObjC the CGColorRef type)
 from Foundation import NSTimer
 from PyObjCTools import AppHelper
 
-WIDTH, HEIGHT = 380, 60
+COLUMS = 4  # power, cadence, heart rate, time
+WIDTH, HEIGHT = 520, 60
 MARGIN = 20 # distance from the screen's top-righ corner
 
 
@@ -14,12 +18,16 @@ def _make_label(x: float) -> AppKit.NSTextField:
     """A white, centered, read-only text label at horizontal position x."""
     label = AppKit.NSTextField.labelWithString_("--")
     label.setFont_(
-        AppKit.NSFont.monospacedDigitSystemFontOfSize_weight_(28, AppKit.NSFontWeightSemibold)
+        AppKit.NSFont.monospacedDigitSystemFontOfSize_weight_(26, AppKit.NSFontWeightSemibold)
     )
     label.setTextColor_(AppKit.NSColor.whiteColor())
     label.setAlignment_(AppKit.NSTextAlignmentCenter)
-    label.setFrame_(AppKit.NSMakeRect(x, 12, WIDTH / 3, 36))
+    label.setFrame_(AppKit.NSMakeRect(x, 12, WIDTH / COLUMS, 36))
     return label
+
+def _fmt(value: int | None, unit: str) -> str:
+    """'152 W', or '--' when there is no value."""
+    return "--" if value is None else f"{value} {unit}"
 
 class Overlay:
     def __init__(self) -> None:
@@ -55,20 +63,35 @@ class Overlay:
         content.layer().setCornerRadius_(14)
 
         # Three labels side by side: power, cadence, heart rate
-        third = WIDTH / 3
-        self.power = _make_label(0)
-        self.cadence = _make_label(third)
-        self.hr = _make_label(2 * third)
-        for label in (self.power, self.cadence, self.hr):
+        column = WIDTH / COLUMS
+        self.power = _make_label(0 * column)
+        self.cadence = _make_label(1 * column)
+        self.hr = _make_label(2 * column)
+        self.time = _make_label(3 * column)
+        for label in (self.power, self.cadence, self.hr, self.time):
             content.addSubview_(label)
 
     def show(self) -> None:
         self.panel.orderFrontRegardless()
 
-    def update(self, power: int, cadence: int, hr: int) -> None:
-        self.power.setStringValue_(f"{power} W")
-        self.cadence.setStringValue_(f"{cadence} rpm")
-        self.hr.setStringValue_(f"{hr} bpm")
+    def update(
+        self,
+        power: int | None,
+        cadence: int | None,
+        hr: int | None,
+        seconds: int,
+        power_color: AppKit.NSColor,
+        hr_color: AppKit.NSColor,    
+    ) -> None:
+        self.power.setStringValue_(_fmt(power, "W"))
+        self.power.setTextColor_(power_color)
+        self.cadence.setStringValue_(_fmt(cadence, "rpm"))
+        self.hr.setStringValue_(_fmt(hr, "bpm"))
+        self.hr.setTextColor_(hr_color)
+
+        minutes, secs = divmod(seconds, 60)
+        hours, minutes = divmod(minutes, 60)
+        self.time.setStringValue_(f"{hours}:{minutes:02d}:{secs:02d}")
 
 def demo() -> None:
     """Show the overlay with random numbers, updated every second."""
@@ -78,14 +101,23 @@ def demo() -> None:
 
     overlay = Overlay()
     overlay.show()
+    start = time.monotonic()
 
     def tick(timer) -> None:
         overlay.update(
-            random.randint(140, 260), random.randint(80, 95), random.randint(120, 150)
+            random.randint(140, 260),
+            random.randint(80, 95),
+            random.randint(120, 150),
+            int(time.monotonic() - start),
+            AppKit.NSColor.whiteColor(),
+            AppKit.NSColor.whiteColor(),
         )
 
-    NSTimer.scheduledTimerWithTimeInterval_repeats_block_(1.0, True, tick)
-    AppHelper.runEventLoop(installInterrupt=True)  # installInterrupt: Ctrl+C quits
+    signal.signal(signal.SIGINT, lambda signum, frame: AppHelper.stopEventLoop())
 
+    NSTimer.scheduledTimerWithTimeInterval_repeats_block_(1.0, True, tick)
+    AppHelper.runEventLoop(installInterrupt=False)
+
+    
 if __name__ == "__main__":
     demo()

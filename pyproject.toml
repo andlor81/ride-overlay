@@ -11,7 +11,8 @@ license = "MIT"
 requires-python = ">=3.10"
 dependencies = [
     "openant",
-    "pyobjc-framework-Cocoa; sys_platform == 'darwin'"
+    "pyobjc-framework-Cocoa; sys_platform == 'darwin'",
+    "pyobjc-framework-Quartz; sys_platform == 'darwin'",
 ]
 
 [project.scripts]

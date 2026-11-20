@@ -1,8 +1,8 @@
-from ride_overlay import ant_reader
+from ride_overlay import app
 
 
 def main() -> None:
-    ant_reader.run()
+    app.run()
 
 
 if __name__ == "__main__":
