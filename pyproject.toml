@@ -9,7 +9,10 @@ description = "Floating macOS overlay showing live ANT+ power, cadence and heart
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
-dependencies = ["openant"]
+dependencies = [
+    "openant",
+    "pyobjc-framework-Cocoa; sys_platform == 'darwin'"
+]
 
 [project.scripts]
 ride-overlay = "ride_overlay.__main__:main"
