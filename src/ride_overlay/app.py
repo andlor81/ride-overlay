@@ -9,11 +9,12 @@ from PyObjCTools import AppHelper
 
 from ride_overlay import config as config_file
 from ride_overlay import menubar
-from ride_overlay.ant_reader import AntReader, StickError
+from ride_overlay.ant_reader import AntReader, StickError, stick_present
 from ride_overlay.config import ConfigError, Zone
 from ride_overlay.overlay import Overlay
 
 REFRESH = 0.25  # seconds between window updates
+WATCHDOG_INTERVAL = 2.0  # seconds between checks for the ANT+ stick
 
 # Color names used in the config file -> macOS system colors
 NS_COLORS = {
@@ -91,6 +92,33 @@ def run() -> None:
             hr_color=zone_color(snap.hr, config.hr_zones),
         )
 
+    stick_ok = True
+    seen_count = 0  # consecutive checks that found the stick again
+
+    def watchdog(timer) -> None:
+        nonlocal stick_ok, seen_count
+        present = stick_present()
+
+        if stick_ok:
+            if not present:  # running -> stick lost
+                stick_ok = False
+                reader.stop()  # also ends openant's receive threads
+                overlay.show_message("No ANT+ stick")
+            return
+
+        # Stick lost: reconnect once it has been back for two checks in a row
+        seen_count = seen_count + 1 if present else 0
+        if seen_count < 2:
+            return
+        try:
+            reader.start()
+        except StickError:
+            seen_count = 0  # not ready yet; try again later
+            return
+        stick_ok = True  # stick lost -> running
+        seen_count = 0
+        overlay.clear_message()
+
     def shutdown() -> None:
         overlay.save_position()  # remembered for the next start
         reader.stop()  # release the ANT+ stick cleanly
@@ -103,4 +131,5 @@ def run() -> None:
     signal.signal(signal.SIGINT, lambda signum, frame: shutdown())
 
     NSTimer.scheduledTimerWithTimeInterval_repeats_block_(REFRESH, True, tick)
+    NSTimer.scheduledTimerWithTimeInterval_repeats_block_(WATCHDOG_INTERVAL, True, watchdog)
     AppHelper.runEventLoop(installInterrupt=False)

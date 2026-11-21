@@ -76,11 +76,31 @@ class Overlay:
         self.cadence = _make_label(1 * column)
         self.hr = _make_label(2 * column)
         self.time = _make_label(3 * column)
-        for label in (self.power, self.cadence, self.hr, self.time):
+        self._values = (self.power, self.cadence, self.hr, self.time)
+        for label in self._values:
             content.addSubview_(label)
+
+        # One wide label for messages like "No ANT+ stick", hidden until needed
+        self.message = _make_label(0)
+        self.message.setFrame_(AppKit.NSMakeRect(0, 12, WIDTH, 36))
+        self.message.setHidden_(True)
+        content.addSubview_(self.message)
 
     def show(self) -> None:
         self.panel.orderFrontRegardless()
+
+    def show_message(self, text: str) -> None:
+        """Replace the four values with one message."""
+        self.message.setStringValue_(text)
+        self.message.setHidden_(False)
+        for label in self._values:
+            label.setHidden_(True)
+
+    def clear_message(self) -> None:
+        """Show the four values again."""
+        self.message.setHidden_(True)
+        for label in self._values:
+            label.setHidden_(False)
 
     def set_click_through(self, enabled: bool) -> None:
         """When enabled, mouse clicks go to the window below (e.g. the video)."""

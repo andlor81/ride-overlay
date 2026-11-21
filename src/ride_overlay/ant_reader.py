@@ -17,8 +17,19 @@ POWER_WINDOW = 3.0  # seconds averaged for the power display
 STALE_AFTER = 3.0  # seconds without new data before a value counts as missing
 STARTUP_ATTEMPTS = 3
 
+# USB IDs of the ANT+ sticks openant supports: ANT USB2 and ANT USB-m
+STICK_USB_IDS = ((0x0FCF, 0x1008), (0x0FCF, 0x1009))
+
 class StickError(Exception):
     """The ANT+ stick is missing, busy or not answering."""
+
+
+def stick_present() -> bool:
+    """True if an ANT+ USB stick is plugged in (looks at the USB bus only)."""
+    return any(
+        usb.core.find(idVendor=vendor, idProduct=product) is not None
+        for vendor, product in STICK_USB_IDS
+    )
 
 @dataclass
 class Snapshot:
@@ -101,7 +112,10 @@ class AntReader:
             self._node.ant.reset_system()
         except Exception:
             pass  # the stick may not be responding; we are shutting down anyway
-        self._node.stop()
+        try:
+            self._node.stop()  # ends openant's threads and releases the USB device
+        except Exception:
+            pass  # the stick may have been unplugged; nothing left to release
         self._node = None
 
     def snapshot(self) -> Snapshot:
