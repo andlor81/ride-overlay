@@ -7,47 +7,45 @@ import AppKit
 from Foundation import NSTimer
 from PyObjCTools import AppHelper
 
+from ride_overlay import config as config_file
 from ride_overlay.ant_reader import AntReader
+from ride_overlay.config import ConfigError, Zone
 from ride_overlay.overlay import Overlay
 
 REFRESH = 0.25  # seconds between window updates
 
-# Placeholder values: replace them with your own.
-FTP = 200  # watts
-
-# Lower limit of each power zone in % of FTP (classic 7-zone model), and its color
-POWER_ZONES = [
-    (0, AppKit.NSColor.systemGrayColor()),  # zone 1: active recovery
-    (56, AppKit.NSColor.systemBlueColor()),  # zone 2: endurance
-    (76, AppKit.NSColor.systemGreenColor()),  # zone 3: tempo
-    (91, AppKit.NSColor.systemYellowColor()),  # zone 4: threshold
-    (106, AppKit.NSColor.systemOrangeColor()),  # zone 5: VO2max
-    (121, AppKit.NSColor.systemRedColor()),  # zone 6: anaerobic
-    (151, AppKit.NSColor.systemPurpleColor()),  # zone 7: neuromuscular
-]
-
-# Lower limit (bpm) of each heart rate zone, and its color.
-HR_ZONES = [
-    (0, AppKit.NSColor.whiteColor()),  # below zone 1
-    (110, AppKit.NSColor.systemGrayColor()),  # zone 1
-    (130, AppKit.NSColor.systemBlueColor()),  # zone 2
-    (145, AppKit.NSColor.systemGreenColor()),  # zone 3
-    (160, AppKit.NSColor.systemOrangeColor()),  # zone 4
-    (172, AppKit.NSColor.systemRedColor()),  # zone 5
-]
+# Color names used in the config file -> macOS system colors
+NS_COLORS = {
+    "white": AppKit.NSColor.whiteColor(),
+    "gray": AppKit.NSColor.systemGrayColor(),
+    "blue": AppKit.NSColor.systemBlueColor(),
+    "green": AppKit.NSColor.systemGreenColor(),
+    "yellow": AppKit.NSColor.systemYellowColor(),
+    "orange": AppKit.NSColor.systemOrangeColor(),
+    "red": AppKit.NSColor.systemRedColor(),
+    "purple": AppKit.NSColor.systemPurpleColor(),
+    "pink": AppKit.NSColor.systemPinkColor(),
+    "teal": AppKit.NSColor.systemTealColor(),
+}
 
 
-
-def zone_color(value: float | None, zones: list) -> AppKit.NSColor:
-    """Color of the zone that hr falls into (white if unknown)."""
-    color = AppKit.NSColor.whiteColor()
+def zone_color(value: float | None, zones: list[Zone]) -> AppKit.NSColor:
+    """Color of the zone that value falls into (white if unknown)."""
+    color_name = "white"
     if value is not None:
-        for lower, zone_color in HR_ZONES:
-            if value >= lower:
-                color = zone_color
-    return color
+        for zone in zones:
+            if value >= zone.lower:
+                color_name = zone.color
+    return NS_COLORS[color_name]
+
 
 def run() -> None:
+    try:
+        config = config_file.load()
+    except ConfigError as error:
+        print(f"Config error: {error}")
+        raise SystemExit(1) from None
+
     app = AppKit.NSApplication.sharedApplication()
     # Accessory app: no Dock icon, no menu bar, never steals focus
     app.setActivationPolicy_(AppKit.NSApplicationActivationPolicyAccessory)
@@ -55,7 +53,7 @@ def run() -> None:
     overlay = Overlay()
     overlay.show()
 
-    reader = AntReader()
+    reader = AntReader(config.trainer_id, config.hr_id)
     reader.start()
 
     moving_time = 0.0
@@ -69,14 +67,14 @@ def run() -> None:
             moving_time += now - last_tick
         last_tick = now
 
-        power_percent = None if snap.power is None else snap.power * 100 / FTP
+        power_percent = None if snap.power is None else snap.power * 100 / config.ftp
         overlay.update(
             snap.power,
             snap.cadence,
             snap.hr,
             int(moving_time),
-            power_color=zone_color(power_percent, POWER_ZONES),
-            hr_color=zone_color(snap.hr, HR_ZONES)    
+            power_color=zone_color(power_percent, config.power_zones),
+            hr_color=zone_color(snap.hr, config.hr_zones),
         )
 
     def quit_app(signum, frame) -> None:

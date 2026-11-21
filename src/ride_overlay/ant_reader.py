@@ -11,10 +11,6 @@ from openant.devices.heart_rate import HeartRate  # type: ignore
 from openant.easy.exception import AntException
 from openant.easy.node import Node  # type: ignore
 
-# Device numbers from `openant scan` (0 would mean "first one found")
-TRAINER_ID = 20412
-HR_ID = 37413
-
 POWER_WINDOW = 3.0  # seconds averaged for the power display
 STALE_AFTER = 3.0  # seconds without new data before a value counts as missing
 STARTUP_ATTEMPTS = 3
@@ -29,7 +25,9 @@ class Snapshot:
 
 
 class AntReader:
-    def __init__(self) -> None:
+    def __init__(self, trainer_id: int, hr_id: int) -> None:
+        self._trainer_id = trainer_id
+        self._hr_id = hr_id
         self._lock = threading.Lock()
         self._power_samples: deque[tuple[float, int]] = deque()  # (time, watts)
         self._cadence = 0
@@ -72,8 +70,8 @@ class AntReader:
         self._node = Node()  # opens the ANT+ USB stick
         self._node.set_network_key(0x00, ANTPLUS_NETWORK_KEY)
 
-        trainer = FitnessEquipment(self._node, device_id=TRAINER_ID)
-        hr = HeartRate(self._node, device_id=HR_ID)
+        trainer = FitnessEquipment(self._node, device_id=self._trainer_id)
+        hr = HeartRate(self._node, device_id=self._hr_id)
         trainer.on_device_data = self._on_trainer_data
         hr.on_device_data = self._on_hr_data
         self._devices = (trainer, hr)  # keep references so the channels stay alive
