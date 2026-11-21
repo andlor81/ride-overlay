@@ -1,0 +1,35 @@
+# ride-overlay configuration
+#
+# Copy this file to ~/.config/ride-overlay/config.toml and fill in your own values.
+# Colors: white, gray, blue, green, yellow, orange, red, purple, pink, teal
+
+[devices]
+# Device numbers from `openant scan`.
+# 0 means "the first one found", which may pick up a neighbor's device.
+trainer_id = 0  # ANT+ FE-C trainer (device type 17)
+hr_id = 0       # ANT+ heart rate monitor (device type 120)
+
+[power]
+ftp = 200  # watts
+
+# Each zone starts at "from" (% of FTP) and is shown in "color"
+zones = [
+    { from = 0,   color = "gray" },    # zone 1: active recovery
+    { from = 56,  color = "blue" },    # zone 2: endurance
+    { from = 76,  color = "green" },   # zone 3: tempo
+    { from = 91,  color = "yellow" },  # zone 4: threshold
+    { from = 106, color = "orange" },  # zone 5: VO2max
+    { from = 121, color = "red" },     # zone 6: anaerobic
+    { from = 151, color = "purple" },  # zone 7: neuromuscular
+]
+
+[heart_rate]
+# Each zone starts at "from" (bpm) and is shown in "color"
+zones = [
+    { from = 0,   color = "white" },   # below zone 1
+    { from = 110, color = "gray" },    # zone 1
+    { from = 130, color = "blue" },    # zone 2
+    { from = 145, color = "green" },   # zone 3
+    { from = 160, color = "orange" },  # zone 4
+    { from = 172, color = "red" },     # zone 5
+]

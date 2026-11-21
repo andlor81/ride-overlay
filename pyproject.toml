@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Floating macOS overlay showing live ANT+ power, cadence and heart rate"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "openant",
     "pyobjc-framework-Cocoa; sys_platform == 'darwin'",
