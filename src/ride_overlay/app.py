@@ -8,6 +8,7 @@ from Foundation import NSTimer
 from PyObjCTools import AppHelper
 
 from ride_overlay import config as config_file
+from ride_overlay import menubar
 from ride_overlay.ant_reader import AntReader
 from ride_overlay.config import ConfigError, Zone
 from ride_overlay.overlay import Overlay
@@ -77,12 +78,16 @@ def run() -> None:
             hr_color=zone_color(snap.hr, config.hr_zones),
         )
 
-    def quit_app(signum, frame) -> None:
+    def shutdown() -> None:
+        overlay.save_position()  # remembered for the next start
         reader.stop()  # release the ANT+ stick cleanly
         AppHelper.stopEventLoop()  # end the app
 
+    # Menu bar icon; keep the returned objects in a variable so they stay alive
+    menu_objects = menubar.install(overlay, shutdown)  # noqa: F841
+
     # Our own Ctrl+C handler: runs at the next timer tick (within 250 ms)
-    signal.signal(signal.SIGINT, quit_app)
+    signal.signal(signal.SIGINT, lambda signum, frame: shutdown())
 
     NSTimer.scheduledTimerWithTimeInterval_repeats_block_(REFRESH, True, tick)
     AppHelper.runEventLoop(installInterrupt=False)

@@ -12,6 +12,7 @@ from PyObjCTools import AppHelper
 COLUMS = 4  # power, cadence, heart rate, time
 WIDTH, HEIGHT = 520, 60
 MARGIN = 20 # distance from the screen's top-righ corner
+POSITION_KEY = "OverlayOrigin"  # where the position is saved in the user defaults
 
 
 def _make_label(x: float) -> AppKit.NSTextField:
@@ -35,6 +36,13 @@ class Overlay:
         screen = AppKit.NSScreen.mainScreen().visibleFrame()
         x = screen.origin.x + screen.size.width - WIDTH - MARGIN
         y = screen.origin.y + screen.size.height - HEIGHT - MARGIN
+
+        self._default_origin = (x, y)
+
+        # Use the position saved last time, if there is one
+        saved = AppKit.NSUserDefaults.standardUserDefaults().arrayForKey_(POSITION_KEY)
+        if saved is not None and len(saved) == 2:
+            x, y = float(saved[0]), float(saved[1])
 
         # A borderless panel that never takes focus away from Apple TV
         self.panel = AppKit.NSPanel.alloc().initWithContentRect_styleMask_backing_defer_(
@@ -73,6 +81,19 @@ class Overlay:
 
     def show(self) -> None:
         self.panel.orderFrontRegardless()
+
+    def set_click_through(self, enabled: bool) -> None:
+        """When enabled, mouse clicks go to the window below (e.g. the video)."""
+        self.panel.setIgnoresMouseEvents_(enabled)
+
+    def reset_position(self) -> None:
+        self.panel.setFrameOrigin_(self._default_origin)
+
+    def save_position(self) -> None:
+        origin = self.panel.frame().origin
+        AppKit.NSUserDefaults.standardUserDefaults().setObject_forKey_(
+            [origin.x, origin.y], POSITION_KEY
+        )
 
     def update(
         self,
