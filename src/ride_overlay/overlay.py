@@ -9,7 +9,7 @@ import Quartz  # noqa: F401  (teaches PyObjC the CGColorRef type)
 from Foundation import NSTimer
 from PyObjCTools import AppHelper
 
-COLUMS = 4  # power, cadence, heart rate, time
+COLUMNS = 4  # power, cadence, heart rate, time
 WIDTH, HEIGHT = 520, 60
 MARGIN = 20 # distance from the screen's top-righ corner
 POSITION_KEY = "OverlayOrigin"  # where the position is saved in the user defaults
@@ -23,7 +23,7 @@ def _make_label(x: float) -> AppKit.NSTextField:
     )
     label.setTextColor_(AppKit.NSColor.whiteColor())
     label.setAlignment_(AppKit.NSTextAlignmentCenter)
-    label.setFrame_(AppKit.NSMakeRect(x, 12, WIDTH / COLUMS, 36))
+    label.setFrame_(AppKit.NSMakeRect(x, 12, WIDTH / COLUMNS, 36))
     return label
 
 def _fmt(value: int | None, unit: str) -> str:
@@ -70,8 +70,8 @@ class Overlay:
         )
         content.layer().setCornerRadius_(14)
 
-        # Three labels side by side: power, cadence, heart rate
-        column = WIDTH / COLUMS
+        # Four labels side by side: power, cadence, heart rate, and time
+        column = WIDTH / COLUMNS
         self.power = _make_label(0 * column)
         self.cadence = _make_label(1 * column)
         self.hr = _make_label(2 * column)
