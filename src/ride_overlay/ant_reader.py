@@ -5,6 +5,8 @@ import time
 from collections import deque
 from dataclasses import dataclass
 
+import usb.core  # type: ignore
+from openant.base.driver import DriverNotFound  # type: ignore
 from openant.devices import ANTPLUS_NETWORK_KEY  # type: ignore
 from openant.devices.fitness_equipment import FitnessEquipment  # type: ignore
 from openant.devices.heart_rate import HeartRate  # type: ignore
@@ -14,6 +16,9 @@ from openant.easy.node import Node  # type: ignore
 POWER_WINDOW = 3.0  # seconds averaged for the power display
 STALE_AFTER = 3.0  # seconds without new data before a value counts as missing
 STARTUP_ATTEMPTS = 3
+
+class StickError(Exception):
+    """The ANT+ stick is missing, busy or not answering."""
 
 @dataclass
 class Snapshot:
@@ -56,16 +61,23 @@ class AntReader:
     # --- Called on the main thread ---------------------------------------
 
     def start(self) -> None:
-        """Open the stick, retrying if it doesn't answer."""
+        """Open the stick, retrying if it doesn't answer. Raises StickError on failure."""
         for attempt in range(1, STARTUP_ATTEMPTS + 1):
             try:
                 self._open()
                 return
+            except DriverNotFound:
+                raise StickError("No ANT+ USB stick found.\nPlug it in and try again.") from None
+            except usb.core.USBError as error:
+                raise StickError(
+                    f"The ANT+ stick can't be opened ({error}).\n"
+                    "Is Garmin Express or another training app using it? Quit it and try again."
+                ) from None
             except AntException:
                 print(f"ANT+ stick did not answer (attempt {attempt} of {STARTUP_ATTEMPTS})")
                 self.stop()
-        raise RuntimeError("ANT+ stick did not answer. Unplug it, plug it back in, and try again.")
-
+        raise StickError("The ANT+ stick does not answer.\nUnplug it, plug it back in, and try again.")
+    
     def _open(self) -> None:
         self._node = Node()  # opens the ANT+ USB stick
         self._node.set_network_key(0x00, ANTPLUS_NETWORK_KEY)

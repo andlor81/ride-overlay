@@ -9,7 +9,7 @@ from PyObjCTools import AppHelper
 
 from ride_overlay import config as config_file
 from ride_overlay import menubar
-from ride_overlay.ant_reader import AntReader
+from ride_overlay.ant_reader import AntReader, StickError
 from ride_overlay.config import ConfigError, Zone
 from ride_overlay.overlay import Overlay
 
@@ -39,23 +39,36 @@ def zone_color(value: float | None, zones: list[Zone]) -> AppKit.NSColor:
                 color_name = zone.color
     return NS_COLORS[color_name]
 
+def show_error(message: str) -> None:
+    """Show a macOS alert and wait until the user clicks OK."""
+    print(f"Error: {message}")  # still visible when started from the terminal
+    AppKit.NSApplication.sharedApplication().activateIgnoringOtherApps_(True)  # alert in front
+    alert = AppKit.NSAlert.alloc().init()
+    alert.setMessageText_("Ride Overlay can't start")
+    alert.setInformativeText_(message)
+    alert.setAlertStyle_(AppKit.NSAlertStyleCritical)
+    alert.runModal()
 
 def run() -> None:
-    try:
-        config = config_file.load()
-    except ConfigError as error:
-        print(f"Config error: {error}")
-        raise SystemExit(1) from None
-
     app = AppKit.NSApplication.sharedApplication()
     # Accessory app: no Dock icon, no menu bar, never steals focus
     app.setActivationPolicy_(AppKit.NSApplicationActivationPolicyAccessory)
 
-    overlay = Overlay()
-    overlay.show()
+    try:
+        config = config_file.load()
+    except ConfigError as error:
+        show_error(str(error))
+        raise SystemExit(1) from None
 
     reader = AntReader(config.trainer_id, config.hr_id)
-    reader.start()
+    try:
+        reader.start()
+    except StickError as error:
+        show_error(str(error))
+        raise SystemExit(1) from None
+
+    overlay = Overlay()
+    overlay.show()
 
     moving_time = 0.0
     last_tick = time.monotonic()
