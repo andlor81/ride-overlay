@@ -11,6 +11,7 @@ license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
     "openant",
+    "libusb-package",
     "pyobjc-framework-Cocoa; sys_platform == 'darwin'",
     "pyobjc-framework-Quartz; sys_platform == 'darwin'",
 ]

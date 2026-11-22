@@ -5,6 +5,7 @@ import time
 from collections import deque
 from dataclasses import dataclass
 
+import libusb_package
 import usb.core  # type: ignore
 from openant.base.driver import DriverNotFound  # type: ignore
 from openant.devices import ANTPLUS_NETWORK_KEY  # type: ignore
@@ -30,6 +31,16 @@ def stick_present() -> bool:
         usb.core.find(idVendor=vendor, idProduct=product) is not None
         for vendor, product in STICK_USB_IDS
     )
+
+
+def use_bundled_libusb() -> None:
+    """Make pyusb (and so openant) use the libusb that ships with libusb-package.
+
+    pyusb loads libusb once and caches it, so this must run before the first
+    USB access. Afterwards the app no longer needs Homebrew's libusb.
+    """
+    if libusb_package.get_libusb1_backend() is None:
+        raise StickError("The USB library (libusb) could not be loaded.")
 
 
 class TrackingFitnessEquipment(FitnessEquipment):
@@ -93,6 +104,7 @@ class AntReader:
 
     def start(self) -> None:
         """Open the stick, retrying if it doesn't answer. Raises StickError on failure."""
+        use_bundled_libusb()
         for attempt in range(1, STARTUP_ATTEMPTS + 1):
             try:
                 self._open()

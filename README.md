@@ -11,7 +11,6 @@ It **only listens** to ANT+ broadcasts from your trainer and heart rate sensor, 
 - macOS
 - Python 3.10+
 - An ANT+ USB stick (tested with Garmin ANT USBStick2)
-- `libusb` (`brew install libusb`)
 
 ```bash
 git clone https://github.com/andlor81/ride-overlay.git
