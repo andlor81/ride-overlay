@@ -225,3 +225,4 @@ __marimo__/
 devices.json
 config.toml
 .DS_Store
+ride_log.txt
