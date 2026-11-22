@@ -31,6 +31,26 @@ def stick_present() -> bool:
         for vendor, product in STICK_USB_IDS
     )
 
+
+class TrackingFitnessEquipment(FitnessEquipment):
+    """FE-C channel opened as a normal (tracking) channel.
+
+    openant opens every channel with ext_assign=0x01 (background scanning).
+    Such a channel keeps searching instead of locking onto the device and
+    receives only about every 13th message. ext_assign=None fixes that.
+    """
+
+    def open_channel(self, extended=True, channel_type=None, ext_assign=None):
+        super().open_channel(extended=extended, channel_type=channel_type, ext_assign=None)
+
+
+class TrackingHeartRate(HeartRate):
+    """Heart rate channel opened as a normal (tracking) channel (see above)."""
+
+    def open_channel(self, extended=True, channel_type=None, ext_assign=None):
+        super().open_channel(extended=extended, channel_type=channel_type, ext_assign=None)
+
+
 @dataclass
 class Snapshot:
     """A consistent copy of the latest values. None means no recent data."""
@@ -93,8 +113,8 @@ class AntReader:
         self._node = Node()  # opens the ANT+ USB stick
         self._node.set_network_key(0x00, ANTPLUS_NETWORK_KEY)
 
-        trainer = FitnessEquipment(self._node, device_id=self._trainer_id)
-        hr = HeartRate(self._node, device_id=self._hr_id)
+        trainer = TrackingFitnessEquipment(self._node, device_id=self._trainer_id)
+        hr = TrackingHeartRate(self._node, device_id=self._hr_id)
         trainer.on_device_data = self._on_trainer_data
         hr.on_device_data = self._on_hr_data
         self._devices = (trainer, hr)  # keep references so the channels stay alive
