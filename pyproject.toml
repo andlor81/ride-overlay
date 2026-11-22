@@ -18,3 +18,30 @@ dependencies = [
 
 [project.scripts]
 ride-overlay = "ride_overlay.__main__:main"
+
+[tool.briefcase]
+project_name = "ride-overlay"
+bundle = "io.github.andlor81"
+version = "0.1.0"
+url = "https://github.com/andlor81/ride-overlay"
+license = "MIT"
+license-files = ["LICENSE"]
+author = "Andreas Lorenz"
+
+[tool.briefcase.app.ride-overlay]
+formal_name = "Ride Overlay"
+description = "Floating macOS overlay showing live ANT+ power, cadence and heart rate"
+icon = "icons/ride-overlay"
+sources = ["src/ride_overlay"]
+requires = [
+    "openant",
+    "libusb-package",
+]
+
+[tool.briefcase.app.ride-overlay.macOS]
+requires = [
+    "pyobjc-framework-Cocoa",
+    "pyobjc-framework-Quartz",
+]
+universal_build = false  # build for this Mac's CPU only (for now)
+info."LSUIElement" = true  # menu bar app: no Dock icon, no app menu
